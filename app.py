@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import subprocess
-import re
+import shutil
 import yt_dlp
 import zipfile
 from pdf2docx import Converter
@@ -14,9 +14,16 @@ st.set_page_config(page_title="LocalMediaEngine Online", page_icon="🎬", layou
 st.title("🌐 LOCAL MEDIA ENGINE | Cloud Processing Hub")
 st.write("Upload files or paste URLs to process media directly on our high-performance cloud servers.")
 
-# Global cloud platform definitions
-FFMPEG_BIN = "ffmpeg" 
-NODE_BIN = "node"
+# AUTOMATED FFMEG PATH DISCOVERY
+# This looks up exactly where Linux installed your packages.txt binary to prevent yt-dlp path errors.
+SYSTEM_FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
+
+# System status tracking notice for debugging
+if not os.path.exists(SYSTEM_FFMPEG) and not shutil.which("ffmpeg"):
+    st.sidebar.warning("⚠️ FFmpeg binary initialization pending. If YouTube downloads fail, please reboot the app container.")
+else:
+    st.sidebar.success(f"⚡ Core Audio/Video Engine Ready")
+
 COOKIES_FILE = "cookies.txt"
 BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
 
@@ -38,7 +45,6 @@ def render_monetized_download(file_path):
     with col1:
         st.markdown("### 🔓 Step 1: Unlock Secure Download")
         st.write("Click the button below to verify your download stream and open your results profile.")
-        # Link opens your Blogger CPM page in a new tab safely bypassing blockers
         st.link_button("👉 CLICK HERE TO UNLOCK LINK (Opens Ads Page)", BLOG_URL, type="primary", use_container_width=True)
         
     with col2:
@@ -69,9 +75,11 @@ if workspace == "YouTube Video Download":
             st.error("Error: Please provide a valid URL endpoint.")
         else:
             with st.spinner("Downloading and muxing media streams directly on cloud node..."):
+                # Configured with absolute paths for the Linux environment
                 opts = {
                     'outtmpl': os.path.join(out_dir, '%(title)s.%(ext)s'),
-                    'ffmpeg_location': FFMPEG_BIN
+                    'ffmpeg_location': SYSTEM_FFMPEG,
+                    'noplaylist': True
                 }
                 if os.path.exists(COOKIES_FILE): 
                     opts['cookiefile'] = COOKIES_FILE
@@ -119,7 +127,7 @@ elif workspace == "Document & Format Hub":
                     f.write(uploaded_file.getbuffer())
                     
                 out_file = None
-                cmd = [FFMPEG_BIN, "-y", "-i", input_path]
+                cmd = [SYSTEM_FFMPEG, "-y", "-i", input_path]
                 is_ffmpeg = False
                 
                 if action == "Video to .mp4":
@@ -156,7 +164,6 @@ elif workspace == "Document & Format Hub":
                     with st.spinner(f"Compiling conversion array for {action}..."):
                         if is_ffmpeg:
                             subprocess.run(cmd, check=True)
-                        
                         elif action == ".docx to .pdf":
                             out_file = os.path.join(out_dir, f"{base_name}.pdf")
                             subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", out_dir, input_path], check=True)
@@ -216,7 +223,7 @@ elif workspace == "Codec & Extraction Hub":
             with open(input_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
                 
-            cmd = [FFMPEG_BIN, "-y", "-i", input_path]
+            cmd = [SYSTEM_FFMPEG, "-y", "-i", input_path]
             out_file = None
             
             if action == "Standard AVC (H.264) to HEVC (H.265)":
