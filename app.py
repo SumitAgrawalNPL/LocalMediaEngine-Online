@@ -10,9 +10,8 @@ from PIL import Image
 import fitz  # PyMuPDF
 
 # =========================================================================
-# CRITICAL SYSTEM PATH INJECTION
+# SYSTEM PATH INJECTION
 # Forces the cloud Linux environment to expose APT binary directories globally.
-# This prevents yt-dlp from failing to see FFmpeg and Node.js.
 # =========================================================================
 os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + "/usr/bin" + os.pathsep + "/usr/local/bin" + os.pathsep + "/bin"
 
@@ -27,11 +26,6 @@ if shutil.which("ffmpeg"):
     st.sidebar.success("⚡ Core Audio/Video Engine Ready")
 else:
     st.sidebar.warning("⚠️ Engine initializing components... If download errors persist, please click 'Reboot App'.")
-
-if shutil.which("node"):
-    st.sidebar.success("🔑 JS Security Bypass Core Ready")
-else:
-    st.sidebar.info("ℹ️ Running native decryption fallback.")
 
 COOKIES_FILE = "cookies.txt"
 BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
@@ -84,10 +78,25 @@ if workspace == "YouTube Video Download":
             st.error("Error: Please provide a valid URL endpoint.")
         else:
             with st.spinner("Downloading and muxing media streams directly on cloud node..."):
+                # DATA CENTER BYPASS MATRIX
+                # Forces yt-dlp to look like a phone native application to clear 403 Forbidden faults
                 opts = {
                     'outtmpl': os.path.join(out_dir, '%(title)s.%(ext)s'),
-                    'noplaylist': True
+                    'noplaylist': True,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['android', 'ios'],
+                            'skip': ['webpage']
+                        }
+                    },
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                    }
                 }
+                
+                # Check for cookies validation payload
                 if os.path.exists(COOKIES_FILE): 
                     opts['cookiefile'] = COOKIES_FILE
                 
