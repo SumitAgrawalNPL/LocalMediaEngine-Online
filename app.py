@@ -131,7 +131,8 @@ def render_monetized_download(file_path):
 # ==========================================
 if workspace == "Document & Format Hub":
     st.header("📄 Document & Format Conversion Hub")
-    uploaded_file = st.file_uploader("Upload target media or text document:")
+    # Added max_upload_size parameter for 2.5 GB (2560 MB) limit
+    uploaded_file = st.file_uploader("Upload target media or text document:", max_upload_size=2560)
     
     fmt = st.selectbox("Media Conversion Mapping:", ["-- None --", "Video to .mp4", "Video to .gif", "Video to .webm", "Video to .mov", "Video to .mkv", "Audio to .wav", "Image to .png", "Image to .jpeg"])
     doc = st.selectbox("Document Processing Route:", ["-- None --", ".docx to .pdf", ".pdf to .docx", ".pdf to image (.png)", ".jpeg to .pdf", ".png to .pdf"])
@@ -223,7 +224,8 @@ if workspace == "Document & Format Hub":
 # ==========================================
 elif workspace == "Codec & Extraction Hub":
     st.header("🎬 Advanced Codec & Extraction Suite")
-    uploaded_file = st.file_uploader("Upload source system video container:")
+    # Added max_upload_size parameter for 2.5 GB (2560 MB) limit
+    uploaded_file = st.file_uploader("Upload source system video container:", max_upload_size=2560)
     action = st.selectbox("Select Target Pipeline Matrix Operation:", [
         "-- None --", 
         "Standard AVC (H.264) to HEVC (H.265)", 
