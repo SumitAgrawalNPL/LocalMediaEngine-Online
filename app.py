@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import sys
 import subprocess
 import shutil
 import yt_dlp
@@ -8,21 +9,29 @@ from pdf2docx import Converter
 from PIL import Image
 import fitz  # PyMuPDF
 
+# =========================================================================
+# CRITICAL SYSTEM PATH INJECTION
+# Forces the cloud Linux environment to expose APT binary directories globally.
+# This prevents yt-dlp from failing to see FFmpeg and Node.js.
+# =========================================================================
+os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + "/usr/bin" + os.pathsep + "/usr/local/bin" + os.pathsep + "/bin"
+
 # Initialize configuration
 st.set_page_config(page_title="LocalMediaEngine Online", page_icon="🎬", layout="wide")
 
 st.title("🌐 LOCAL MEDIA ENGINE | Cloud Processing Hub")
 st.write("Upload files or paste URLs to process media directly on our high-performance cloud servers.")
 
-# AUTOMATED FFMEG PATH DISCOVERY
-# This looks up exactly where Linux installed your packages.txt binary to prevent yt-dlp path errors.
-SYSTEM_FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
-
-# System status tracking notice for debugging
-if not os.path.exists(SYSTEM_FFMPEG) and not shutil.which("ffmpeg"):
-    st.sidebar.warning("⚠️ FFmpeg binary initialization pending. If YouTube downloads fail, please reboot the app container.")
+# Sidebar status tracking for verification
+if shutil.which("ffmpeg"):
+    st.sidebar.success("⚡ Core Audio/Video Engine Ready")
 else:
-    st.sidebar.success(f"⚡ Core Audio/Video Engine Ready")
+    st.sidebar.warning("⚠️ Engine initializing components... If download errors persist, please click 'Reboot App'.")
+
+if shutil.which("node"):
+    st.sidebar.success("🔑 JS Security Bypass Core Ready")
+else:
+    st.sidebar.info("ℹ️ Running native decryption fallback.")
 
 COOKIES_FILE = "cookies.txt"
 BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
@@ -75,10 +84,8 @@ if workspace == "YouTube Video Download":
             st.error("Error: Please provide a valid URL endpoint.")
         else:
             with st.spinner("Downloading and muxing media streams directly on cloud node..."):
-                # Configured with absolute paths for the Linux environment
                 opts = {
                     'outtmpl': os.path.join(out_dir, '%(title)s.%(ext)s'),
-                    'ffmpeg_location': SYSTEM_FFMPEG,
                     'noplaylist': True
                 }
                 if os.path.exists(COOKIES_FILE): 
@@ -127,7 +134,7 @@ elif workspace == "Document & Format Hub":
                     f.write(uploaded_file.getbuffer())
                     
                 out_file = None
-                cmd = [SYSTEM_FFMPEG, "-y", "-i", input_path]
+                cmd = ["ffmpeg", "-y", "-i", input_path]
                 is_ffmpeg = False
                 
                 if action == "Video to .mp4":
@@ -223,7 +230,7 @@ elif workspace == "Codec & Extraction Hub":
             with open(input_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
                 
-            cmd = [SYSTEM_FFMPEG, "-y", "-i", input_path]
+            cmd = ["ffmpeg", "-y", "-i", input_path]
             out_file = None
             
             if action == "Standard AVC (H.264) to HEVC (H.265)":
