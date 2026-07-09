@@ -3,7 +3,6 @@ import os
 import sys
 import subprocess
 import shutil
-import yt_dlp
 import zipfile
 from pdf2docx import Converter
 from PIL import Image
@@ -18,6 +17,38 @@ os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + "/usr/bin" + os.p
 # Initialize configuration
 st.set_page_config(page_title="LocalMediaEngine Online", page_icon="🎬", layout="wide")
 
+# =========================================================================
+# FORCE LIGHT THEME (CSS INJECTION)
+# Overrides any user system preferences to enforce a clean light user interface.
+# =========================================================================
+st.markdown(
+    """
+    <style>
+    /* Main container light mode background */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background-color: #FFFFFF !important;
+        color: #31333F !important;
+    }
+    
+    /* Sidebar light mode background */
+    [data-testid="stSidebar"] {
+        background-color: #F0F2F6 !important;
+    }
+    
+    /* Force dark text on headers and labels for clear high-contrast visibility */
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
+        color: #31333F !important;
+    }
+    
+    /* Inputs, text fields, and dropdown containers text behavior */
+    div[data-baseweb="select"] *, input, textarea {
+        color: #31333F !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("🌐 LOCAL MEDIA ENGINE | Cloud Processing Hub")
 st.write("Process your video, audio, and documents on high-performance cloud pipelines.")
 
@@ -27,13 +58,12 @@ if shutil.which("ffmpeg"):
 else:
     st.sidebar.error("❌ Audio/Video Encoder: OFFLINE (Reboot App)")
 
-COOKIES_FILE = "cookies.txt"
 BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
 
-# Workspace Routing
+# Workspace Routing (YouTube option completely removed)
 workspace = st.sidebar.selectbox(
     "Select Workspace", 
-    ["YouTube Video Download", "Document & Format Hub", "Codec & Extraction Hub"]
+    ["Document & Format Hub", "Codec & Extraction Hub"]
 )
 
 # Output caching directory layout setup
@@ -62,70 +92,9 @@ def render_monetized_download(file_path):
             )
 
 # ==========================================
-# WORKSPACE 1: YOUTUBE DOWNLOADER
+# WORKSPACE 1: DOCUMENT & FORMAT HUB
 # ==========================================
-if workspace == "YouTube Video Download":
-    st.header("🌐 Secure YouTube Extraction Hub")
-    
-    st.info("💡 **Cloud Data-Center Routing Note:** YouTube applies fragment validation rules to data-center server addresses. To avoid 403 Forbidden flags, the extraction hub automatically processes downloads using unified single-container streams.")
-    
-    url = st.text_input("Paste YouTube Video URL:")
-    mode = st.selectbox("Select Extractor Stream Profile:", [
-        "Standard Video + Audio (Cloud Bypass Mode)", 
-        "High-Definition Video Only (No Audio Fallback)", 
-        "High-Quality Audio Only (.mp3)"
-    ])
-    
-    if st.button("RUN EXTRACTOR ARRAY", type="primary"):
-        if not url:
-            st.error("Error: Destination URL boundary cannot be empty.")
-        else:
-            with st.spinner("Acquiring container headers and streaming chunks..."):
-                opts = {
-                    'outtmpl': os.path.join(out_dir, '%(title)s.%(ext)s'),
-                    'noplaylist': True,
-                    'http_headers': {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Origin': 'https://www.youtube.com'
-                    },
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['android', 'web'],
-                            'skip': ['webpage']
-                        }
-                    }
-                }
-                
-                if os.path.exists(COOKIES_FILE): 
-                    opts['cookiefile'] = COOKIES_FILE
-                
-                if mode == "Standard Video + Audio (Cloud Bypass Mode)": 
-                    opts.update({'format': 'best'})
-                elif mode == "High-Definition Video Only (No Audio Fallback)": 
-                    opts.update({'format': 'bestvideo/best'})
-                elif mode == "High-Quality Audio Only (.mp3)": 
-                    opts.update({
-                        'format': 'bestaudio/best', 
-                        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]
-                    })
-                    
-                try:
-                    with yt_dlp.YoutubeDL(opts) as ydl:
-                        info = ydl.extract_info(url, download=True)
-                        filename = ydl.prepare_filename(info)
-                        if mode == "High-Quality Audio Only (.mp3)":
-                            filename = os.path.splitext(filename)[0] + ".mp3"
-                    
-                    render_monetized_download(filename)
-                except Exception as e:
-                    st.error(f"Extractor Pipeline Fault: {str(e)}")
-
-# ==========================================
-# WORKSPACE 2: DOCUMENT & FORMAT HUB
-# ==========================================
-elif workspace == "Document & Format Hub":
+if workspace == "Document & Format Hub":
     st.header("📄 Document & Format Conversion Hub")
     uploaded_file = st.file_uploader("Upload target media or text document:")
     
@@ -215,7 +184,7 @@ elif workspace == "Document & Format Hub":
                     st.error(f"Engine Core Fault: {str(e)}")
 
 # ==========================================
-# WORKSPACE 3: CODEC & EXTRACTION HUB
+# WORKSPACE 2: CODEC & EXTRACTION HUB
 # ==========================================
 elif workspace == "Codec & Extraction Hub":
     st.header("🎬 Advanced Codec & Extraction Suite")
