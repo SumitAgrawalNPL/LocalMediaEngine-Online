@@ -1,0 +1,252 @@
+import streamlit as st
+import os
+import subprocess
+import re
+import yt_dlp
+import zipfile
+from pdf2docx import Converter
+from PIL import Image
+import fitz  # PyMuPDF
+
+# Initialize configuration
+st.set_page_config(page_title="LocalMediaEngine Online", page_icon="🎬", layout="wide")
+
+st.title("🌐 LOCAL MEDIA ENGINE | Cloud Processing Hub")
+st.write("Upload files or paste URLs to process media directly on our high-performance cloud servers.")
+
+# Global cloud platform definitions
+FFMPEG_BIN = "ffmpeg" 
+NODE_BIN = "node"
+COOKIES_FILE = "cookies.txt"
+BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
+
+# Setup Workspace Navigation Sidebar
+workspace = st.sidebar.selectbox(
+    "Select Workspace", 
+    ["YouTube Video Download", "Document & Format Hub", "Codec & Extraction Hub"]
+)
+
+# Server-side directory configuration for processing files
+out_dir = "./output_media"
+os.makedirs(out_dir, exist_ok=True)
+
+def render_monetized_download(file_path):
+    """Renders the Step 1 (Ad Redirect) and Step 2 (Secure Download) flow."""
+    st.success("🎉 Engine processing completed successfully!")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### 🔓 Step 1: Unlock Secure Download")
+        st.write("Click the button below to verify your download stream and open your results profile.")
+        # Link opens your Blogger CPM page in a new tab safely bypassing blockers
+        st.link_button("👉 CLICK HERE TO UNLOCK LINK (Opens Ads Page)", BLOG_URL, type="primary", use_container_width=True)
+        
+    with col2:
+        st.markdown("### 📥 Step 2: Download Your File")
+        st.write("Once Step 1 is opened, your file server access is completely ready to save locally.")
+        with open(file_path, "rb") as f:
+            st.download_button(
+                label="📥 DOWNLOAD PROCESSED FILE NOW",
+                data=f,
+                file_name=os.path.basename(file_path),
+                use_container_width=True
+            )
+
+# ==========================================
+# WORKSPACE 1: YOUTUBE DOWNLOADER
+# ==========================================
+if workspace == "YouTube Video Download":
+    st.header("🌐 YouTube Video Download Workspace")
+    url = st.text_input("Paste YouTube Video URL here:")
+    mode = st.selectbox("Select Target Stream Output Type:", [
+        "YouTube full video and audio", 
+        "YouTube video only no audio", 
+        "YouTube audio only .mp3"
+    ])
+    
+    if st.button("START DOWNLOADING STREAM", type="primary"):
+        if not url:
+            st.error("Error: Please provide a valid URL endpoint.")
+        else:
+            with st.spinner("Downloading and muxing media streams directly on cloud node..."):
+                opts = {
+                    'outtmpl': os.path.join(out_dir, '%(title)s.%(ext)s'),
+                    'ffmpeg_location': FFMPEG_BIN
+                }
+                if os.path.exists(COOKIES_FILE): 
+                    opts['cookiefile'] = COOKIES_FILE
+                
+                if mode == "YouTube full video and audio": 
+                    opts.update({'format': 'bestvideo+bestaudio/best', 'merge_output_format': 'mp4'})
+                elif mode == "YouTube video only no audio": 
+                    opts.update({'format': 'bestvideo'})
+                elif mode == "YouTube audio only .mp3": 
+                    opts.update({'format': 'bestaudio/best', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]})
+                    
+                try:
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                        filename = ydl.prepare_filename(info)
+                        if mode == "YouTube audio only .mp3":
+                            filename = os.path.splitext(filename)[0] + ".mp3"
+                    
+                    render_monetized_download(filename)
+                except Exception as e:
+                    st.error(f"Execution Error: {str(e)}")
+
+# ==========================================
+# WORKSPACE 2: DOCUMENT & FORMAT HUB
+# ==========================================
+elif workspace == "Document & Format Hub":
+    st.header("📄 Document & Format Conversion Hub")
+    uploaded_file = st.file_uploader("Upload target media or text document:")
+    
+    fmt = st.selectbox("Media Conversion Mapping:", ["-- None --", "Video to .mp4", "Video to .gif", "Video to .webm", "Video to .mov", "Video to .mkv", "Audio to .wav", "Image to .png", "Image to .jpeg"])
+    doc = st.selectbox("Document Processing Route:", ["-- None --", ".docx to .pdf", ".pdf to .docx", ".pdf to image (.png)", ".jpeg to .pdf", ".png to .pdf"])
+    
+    if st.button("EXECUTE HUB PROCESSING", type="primary"):
+        if not uploaded_file:
+            st.error("Error: Please drag and drop or select an input file first.")
+        else:
+            action = fmt if fmt != "-- None --" else doc
+            if action == "-- None --":
+                st.error("Error: Please specify an operation target layout.")
+            else:
+                base_name, _ = os.path.splitext(uploaded_file.name)
+                input_path = os.path.join(out_dir, uploaded_file.name)
+                
+                with open(input_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                    
+                out_file = None
+                cmd = [FFMPEG_BIN, "-y", "-i", input_path]
+                is_ffmpeg = False
+                
+                if action == "Video to .mp4":
+                    out_file = os.path.join(out_dir, f"{base_name}.mp4")
+                    cmd.extend(["-c:v", "libx264", "-preset", "fast", "-c:a", "aac", out_file])
+                    is_ffmpeg = True
+                elif action == "Video to .gif":
+                    out_file = os.path.join(out_dir, f"{base_name}.gif")
+                    cmd.extend(["-vf", "fps=15,scale=640:-1:flags=lanczos", "-c:v", "gif", out_file])
+                    is_ffmpeg = True
+                elif action == "Video to .webm":
+                    out_file = os.path.join(out_dir, f"{base_name}.webm")
+                    cmd.extend(["-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis", out_file])
+                    is_ffmpeg = True
+                elif action == "Video to .mov":
+                    out_file = os.path.join(out_dir, f"{base_name}.mov")
+                    cmd.extend(["-c:v", "libx264", "-c:a", "aac", out_file])
+                    is_ffmpeg = True
+                elif action == "Video to .mkv":
+                    out_file = os.path.join(out_dir, f"{base_name}.mkv")
+                    cmd.extend(["-c:v", "copy", "-c:a", "copy", out_file])
+                    is_ffmpeg = True
+                elif action == "Audio to .wav":
+                    out_file = os.path.join(out_dir, f"{base_name}.wav")
+                    cmd.extend(["-vn", "-c:a", "pcm_s16le", out_file])
+                    is_ffmpeg = True
+                elif action in ["Image to .png", "Image to .jpeg"]:
+                    ext = "." + action.split(".")[-1]
+                    out_file = os.path.join(out_dir, f"{base_name}{ext}")
+                    cmd.extend(["-c", "copy", out_file])
+                    is_ffmpeg = True
+
+                try:
+                    with st.spinner(f"Compiling conversion array for {action}..."):
+                        if is_ffmpeg:
+                            subprocess.run(cmd, check=True)
+                        
+                        elif action == ".docx to .pdf":
+                            out_file = os.path.join(out_dir, f"{base_name}.pdf")
+                            subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", out_dir, input_path], check=True)
+                        elif action == ".pdf to .docx":
+                            out_file = os.path.join(out_dir, f"{base_name}.docx")
+                            cv = Converter(input_path)
+                            cv.convert(out_file)
+                            cv.close()
+                        elif action in [".jpeg to .pdf", ".png to .pdf"]:
+                            out_file = os.path.join(out_dir, f"{base_name}.pdf")
+                            img = Image.open(input_path).convert('RGB')
+                            img.save(out_file)
+                        elif action == ".pdf to image (.png)":
+                            doc_pdf = fitz.open(input_path)
+                            out_file = os.path.join(out_dir, f"{base_name}_extracted_pages.zip")
+                            with zipfile.ZipFile(out_file, 'w') as zipf:
+                                for idx in range(len(doc_pdf)):
+                                    page = doc_pdf.load_page(idx)
+                                    pix = page.get_pixmap(dpi=300)
+                                    img_name = f"{base_name}_page_{idx+1}.png"
+                                    img_path = os.path.join(out_dir, img_name)
+                                    pix.save(img_path)
+                                    zipf.write(img_path, img_name)
+                                    os.remove(img_path)
+
+                    if out_file and os.path.exists(out_file):
+                        render_monetized_download(out_file)
+                except Exception as e:
+                    st.error(f"Engine Core Fault: {str(e)}")
+
+# ==========================================
+# WORKSPACE 3: CODEC & EXTRACTION HUB
+# ==========================================
+elif workspace == "Codec & Extraction Hub":
+    st.header("🎬 Advanced Codec & Extraction Suite")
+    uploaded_file = st.file_uploader("Upload source system video container:")
+    action = st.selectbox("Select Target Pipeline Matrix Operation:", [
+        "-- None --", 
+        "Standard AVC (H.264) to HEVC (H.265)", 
+        "HEVC (H.265) to Standard AVC (H.264)", 
+        "Standard AVC (H.264) to AV1",
+        "AV1 to Standard AVC (H.264)",
+        "Video to Apple ProRes 422", 
+        "Apple ProRes to Standard Video (.mp4)",
+        "Extract Audio", 
+        "Extract Video"
+    ])
+    
+    if st.button("RUN ENGINE OPERATIONAL ARRAY", type="primary"):
+        if not uploaded_file:
+            st.error("Error: Input video object is missing.")
+        elif action == "-- None --":
+            st.error("Error: Please assign an operation pipeline.")
+        else:
+            base_name, ext = os.path.splitext(uploaded_file.name)
+            input_path = os.path.join(out_dir, uploaded_file.name)
+            with open(input_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            cmd = [FFMPEG_BIN, "-y", "-i", input_path]
+            out_file = None
+            
+            if action == "Standard AVC (H.264) to HEVC (H.265)":
+                out_file = os.path.join(out_dir, f"{base_name}_HEVC.mp4")
+                cmd.extend(["-c:v", "libx265", "-pix_fmt", "yuv420p", "-c:a", "copy", out_file])
+            elif action == "HEVC (H.265) to Standard AVC (H.264)":
+                out_file = os.path.join(out_dir, f"{base_name}_AVC.mp4")
+                cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out_file])
+            elif action == "Standard AVC (H.264) to AV1":
+                out_file = os.path.join(out_dir, f"{base_name}_AV1.mkv")
+                cmd.extend(["-c:v", "libaom-av1", "-cpu-used", "6", "-c:a", "copy", out_file])
+            elif action == "AV1 to Standard AVC (H.264)":
+                out_file = os.path.join(out_dir, f"{base_name}_AVC_from_AV1.mp4")
+                cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out_file])
+            elif action == "Video to Apple ProRes 422":
+                out_file = os.path.join(out_dir, f"{base_name}_master.mov")
+                cmd.extend(["-c:v", "prores_ks", "-profile:v", "3", "-pix_fmt", "yuv422p10le", "-c:a", "pcm_s16le", out_file])
+            elif action == "Apple ProRes to Standard Video (.mp4)":
+                out_file = os.path.join(out_dir, f"{base_name}_from_prores.mp4")
+                cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", out_file])
+            elif action == "Extract Audio":
+                out_file = os.path.join(out_dir, f"{base_name}_audio.mp3")
+                cmd.extend(["-vn", "-c:a", "libmp3lame", "-q:a", "2", out_file])
+            elif action == "Extract Video":
+                out_file = os.path.join(out_dir, f"{base_name}_video_only{ext}")
+                cmd.extend(["-map", "v:0", "-c:v", "copy", "-an", out_file])
+                
+            try:
+                with st.spinner("Executing system encoding array..."):
+                    subprocess.run(cmd, check=True)
+                render_monetized_download(out_file)
+            except Exception as e:
+                st.error(f"FFmpeg Matrix Operational Fault: {str(e)}")
