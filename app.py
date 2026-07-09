@@ -18,30 +18,65 @@ os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + "/usr/bin" + os.p
 st.set_page_config(page_title="LocalMediaEngine Online", page_icon="🎬", layout="wide")
 
 # =========================================================================
-# FORCE LIGHT THEME (CSS INJECTION)
-# Overrides any user system preferences to enforce a clean light user interface.
+# FORCE LIGHT THEME (COMPREHENSIVE WIDGET OVERRIDES)
+# Completely replaces dark background frames inside dropdowns, fields, and files
 # =========================================================================
 st.markdown(
     """
     <style>
-    /* Main container light mode background */
+    /* 1. Main Page & Header Backgrounds */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #FFFFFF !important;
         color: #31333F !important;
     }
     
-    /* Sidebar light mode background */
+    /* 2. Sidebar Layout Background */
     [data-testid="stSidebar"] {
         background-color: #F0F2F6 !important;
     }
     
-    /* Force dark text on headers and labels for clear high-contrast visibility */
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
+    /* 3. Global Text Overrides for High Contrast */
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown, [data-testid="stWidgetLabel"] p {
         color: #31333F !important;
     }
     
-    /* Inputs, text fields, and dropdown containers text behavior */
-    div[data-baseweb="select"] *, input, textarea {
+    /* 4. Fix Selectboxes / Dropdown Control Blocks */
+    div[data-baseweb="select"] > div, 
+    div[data-testid="stSelectbox"] > div {
+        background-color: #F0F2F6 !important;
+        color: #31333F !important;
+        border: 1px solid #CCD1D9 !important;
+    }
+    
+    /* Dropdown selected placeholder values text color */
+    div[data-baseweb="select"] [data-testid="stMarkdownContainer"] p {
+        color: #31333F !important;
+    }
+    
+    /* Interactive Dropdown Popup Options List Panel */
+    ul[role="listbox"] {
+        background-color: #FFFFFF !important;
+    }
+    ul[role="listbox"] li {
+        color: #31333F !important;
+    }
+
+    /* 5. Fix File Uploader Container Box */
+    [data-testid="stFileUploader"] section {
+        background-color: #F0F2F6 !important;
+        color: #31333F !important;
+        border: 1px dashed #CCD1D9 !important;
+    }
+    
+    /* Force upload area inner text/icon strings to dark grey */
+    [data-testid="stFileUploader"] section *, 
+    [data-testid="stFileUploader"] div {
+        color: #31333F !important;
+    }
+    
+    /* 6. Standard Text Inputs and Fields */
+    div[data-baseweb="input"] > div, input, textarea {
+        background-color: #F0F2F6 !important;
         color: #31333F !important;
     }
     </style>
@@ -60,7 +95,7 @@ else:
 
 BLOG_URL = "https://localmediaengineofficial.blogspot.com/p/process-complete-your-media-has-been.html"
 
-# Workspace Routing (YouTube option completely removed)
+# Workspace Routing
 workspace = st.sidebar.selectbox(
     "Select Workspace", 
     ["Document & Format Hub", "Codec & Extraction Hub"]
